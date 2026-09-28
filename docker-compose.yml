@@ -1,0 +1,198 @@
+services:
+  # ============================================================================
+  # DATABASE TIER
+  # ============================================================================
+  mongo:
+    image: mongo:6.0
+    container_name: acs_mongo
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_DATABASE: ${MONGO_DB:-genieacs}
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - acs_net
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  postgres:
+    image: postgis/postgis:16-3.4
+    container_name: acs_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-acs_db}
+      POSTGRES_USER: ${POSTGRES_USER:-acs_admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres_super_secret_change_me}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5432:5432"
+    networks:
+      - acs_net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-acs_admin} -d ${POSTGRES_DB:-acs_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: acs_redis
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    ports:
+      - "127.0.0.1:6379:6379"
+    networks:
+      - acs_net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ============================================================================
+  # GENIEACS CORE (TR-069 ENGINE)
+  # ============================================================================
+  genieacs-cwmp:
+    image: drumsergio/genieacs:latest
+    container_name: acs_genieacs_cwmp
+    restart: unless-stopped
+    command: genieacs-cwmp
+    depends_on:
+      mongo:
+        condition: service_healthy
+    environment:
+      GENIEACS_MONGODB_CONNECTION_URL: mongodb://mongo:27017/${MONGO_DB:-genieacs}
+      GENIEACS_CWMP_PORT: 7547
+      GENIEACS_CWMP_IP: 0.0.0.0
+      GENIEACS_EXT_URL: ${GENIEACS_EXT_URL:-http://192.168.100.1:7547/}
+      GENIEACS_FS_IP: genieacs-fs
+      GENIEACS_FS_PORT: 7567
+    ports:
+      # Port CWMP 7547 TERBUKA KE JARINGAN MODEM / VLAN MANAJEMEN
+      - "0.0.0.0:7547:7547"
+    networks:
+      - acs_net
+
+  genieacs-nbi:
+    image: drumsergio/genieacs:latest
+    container_name: acs_genieacs_nbi
+    restart: unless-stopped
+    command: genieacs-nbi
+    depends_on:
+      mongo:
+        condition: service_healthy
+    environment:
+      GENIEACS_MONGODB_CONNECTION_URL: mongodb://mongo:27017/${MONGO_DB:-genieacs}
+      GENIEACS_NBI_PORT: 7557
+      GENIEACS_NBI_IP: 0.0.0.0
+    # NBI HANYA DIAKSES INTERNAL OLEH BACKEND (tidak diekspos ke publik)
+    ports:
+      - "127.0.0.1:7557:7557"
+    networks:
+      - acs_net
+
+  genieacs-fs:
+    image: drumsergio/genieacs:latest
+    container_name: acs_genieacs_fs
+    restart: unless-stopped
+    command: genieacs-fs
+    depends_on:
+      mongo:
+        condition: service_healthy
+    environment:
+      GENIEACS_MONGODB_CONNECTION_URL: mongodb://mongo:27017/${MONGO_DB:-genieacs}
+      GENIEACS_FS_PORT: 7567
+      GENIEACS_FS_IP: 0.0.0.0
+    ports:
+      - "127.0.0.1:7567:7567"
+    networks:
+      - acs_net
+
+  genieacs-ui:
+    image: drumsergio/genieacs:latest
+    container_name: acs_genieacs_ui
+    restart: unless-stopped
+    command: genieacs-ui
+    depends_on:
+      mongo:
+        condition: service_healthy
+    environment:
+      GENIEACS_MONGODB_CONNECTION_URL: mongodb://mongo:27017/${MONGO_DB:-genieacs}
+      GENIEACS_UI_PORT: 3000
+      GENIEACS_UI_IP: 0.0.0.0
+    # UI GENIEACS HANYA INTERNAL/MANAGEMENT (Port 3001 di localhost)
+    ports:
+      - "127.0.0.1:3001:3000"
+    networks:
+      - acs_net
+
+  # ============================================================================
+  # APPLICATION TIER (BACKEND & FRONTEND)
+  # ============================================================================
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: acs_backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      genieacs-nbi:
+        condition: service_started
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-acs_admin}:${POSTGRES_PASSWORD:-postgres_super_secret_change_me}@postgres:5432/${POSTGRES_DB:-acs_db}
+      GENIEACS_NBI_URL: http://genieacs-nbi:7557
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    ports:
+      - "127.0.0.1:4000:4000"
+    networks:
+      - acs_net
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: acs_frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    networks:
+      - acs_net
+
+  # ============================================================================
+  # REVERSE PROXY & GATEWAY
+  # ============================================================================
+  nginx:
+    image: nginx:alpine
+    container_name: acs_nginx
+    restart: unless-stopped
+    depends_on:
+      - frontend
+      - backend
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./infra/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    networks:
+      - acs_net
+
+volumes:
+  mongo_data:
+  postgres_data:
+  redis_data:
+
+networks:
+  acs_net:
+    driver: bridge

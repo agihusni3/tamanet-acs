@@ -1,0 +1,17 @@
+{
+  "name": "00-default",
+  "channel": "",
+  "weight": 0,
+  "events": {
+    "0 BOOTSTRAP": true,
+    "1 BOOT": true,
+    "2 PERIODIC": true
+  },
+  "precondition": "",
+  "configurations": [
+    {
+      "type": "provision",
+      "name": "default"
+    }
+  ]
+}
