@@ -219,6 +219,19 @@ const INITIAL_NODES: MapNode[] = [
     avgAttenuation: '-21.80 dBm',
     poleLocation: 'Tiang Pintu Masuk Perkemahan',
   },
+  {
+    id: 'odp-11',
+    name: 'ODP-AN-11 Mini (Simpang Keramat)',
+    type: 'ODP',
+    lat: -5.2070,
+    lng: 104.7265,
+    parentName: 'ODC 01 Simpang Pasar',
+    splitterRatio: '1:2 PLC Splitter (2 Port)',
+    capacity: 2,
+    used: 1,
+    avgAttenuation: '-18.20 dBm',
+    poleLocation: 'Tiang Mini Sambungan Drop',
+  },
 
   // 4. ONT Pelanggan
   {
@@ -1203,18 +1216,67 @@ export const GisMapPage: React.FC = () => {
 
               {(editingNode.type === 'SERVER' || editingNode.type === 'ODC' || editingNode.type === 'ODP') && (
                 <div>
-                  <label className="block text-slate-400 font-semibold mb-1">Kapasitas Port / ONU</label>
-                  <input
-                    type="number"
-                    value={formCapacity}
-                    onChange={(e) => setFormCapacity(e.target.value)}
-                    className="w-full bg-dark-900 border border-slate-700 rounded-lg p-2.5 text-slate-200 focus:outline-none focus:border-brand-500 font-mono"
-                  />
+                  <label className="block text-slate-400 font-semibold mb-1">
+                    Kapasitas Port (Mulai dari 2 Port)
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <select
+                      value={formCapacity}
+                      onChange={(e) => {
+                        setFormCapacity(e.target.value);
+                        if (e.target.value === '2') setFormSplitter('1:2 PLC Splitter');
+                        else if (e.target.value === '4') setFormSplitter('1:4 PLC Splitter');
+                        else if (e.target.value === '8') setFormSplitter('1:8 PLC Splitter');
+                        else if (e.target.value === '16') setFormSplitter('1:16 PLC Splitter');
+                        else if (e.target.value === '32') setFormSplitter('1:32 PLC Splitter');
+                      }}
+                      className="w-full bg-dark-900 border border-slate-700 rounded-lg p-2.5 text-slate-200 focus:outline-none focus:border-brand-500 font-mono"
+                    >
+                      <option value="2">2 Port (Splitter 1:2)</option>
+                      <option value="4">4 Port (Splitter 1:4)</option>
+                      <option value="8">8 Port (Splitter 1:8)</option>
+                      <option value="16">16 Port (Splitter 1:16)</option>
+                      <option value="24">24 Port</option>
+                      <option value="32">32 Port (Splitter 1:32)</option>
+                      <option value="48">48 Port (ODC 48 Core)</option>
+                      <option value="64">64 Port (Splitter 1:64)</option>
+                      <option value="96">96 Port (ODC 96 Core)</option>
+                      <option value="144">144 Port (ODC 144 Core)</option>
+                      <option value="288">288 Port (ODC 288 Core)</option>
+                    </select>
+
+                    <input
+                      type="number"
+                      min="2"
+                      placeholder="Custom port..."
+                      value={formCapacity}
+                      onChange={(e) => setFormCapacity(e.target.value)}
+                      className="w-full bg-dark-900 border border-slate-700 rounded-lg p-2.5 text-slate-200 focus:outline-none focus:border-brand-500 font-mono"
+                    />
+                  </div>
                 </div>
               )}
 
               {(editingNode.type === 'ODC' || editingNode.type === 'ODP') && (
                 <>
+                  <div>
+                    <label className="block text-slate-400 font-semibold mb-1">Tipe Splitter / Rasio</label>
+                    <select
+                      value={formSplitter}
+                      onChange={(e) => setFormSplitter(e.target.value)}
+                      className="w-full bg-dark-900 border border-slate-700 rounded-lg p-2.5 text-slate-200 focus:outline-none focus:border-brand-500"
+                    >
+                      <option value="1:2 PLC Splitter">1:2 PLC Splitter (2 Port)</option>
+                      <option value="1:2 FBT Coupler (50:50 / 70:30 / 80:20)">1:2 FBT Coupler (50:50, 70:30, 80:20)</option>
+                      <option value="1:4 PLC Splitter">1:4 PLC Splitter (4 Port)</option>
+                      <option value="1:8 PLC Splitter">1:8 PLC Splitter (8 Port)</option>
+                      <option value="1:16 PLC Splitter">1:16 PLC Splitter (16 Port)</option>
+                      <option value="1:24 PLC Splitter">1:24 PLC Splitter (24 Port)</option>
+                      <option value="1:32 PLC Splitter">1:32 PLC Splitter (32 Port)</option>
+                      <option value="1:64 PLC Splitter">1:64 PLC Splitter (64 Port)</option>
+                      <option value="Straight Core (Tanpa Splitter)">Straight Core (Direct Through)</option>
+                    </select>
+                  </div>
                   <div>
                     <label className="block text-slate-400 font-semibold mb-1">Induk / Sumber Feeder</label>
                     <input
@@ -1361,17 +1423,44 @@ export const GisMapPage: React.FC = () => {
 
               {(pendingNode.type === 'ODC' || pendingNode.type === 'ODP') && (
                 <div>
-                  <label className="block text-slate-400 font-semibold mb-1">Kapasitas Port</label>
-                  <select
-                    value={formCapacity}
-                    onChange={(e) => setFormCapacity(e.target.value)}
-                    className="w-full bg-dark-900 border border-slate-700 rounded-lg p-2.5 text-slate-200 focus:outline-none focus:border-brand-500"
-                  >
-                    <option value="8">8 Port</option>
-                    <option value="16">16 Port</option>
-                    <option value="24">24 Port</option>
-                    <option value="48">48 Port</option>
-                  </select>
+                  <label className="block text-slate-400 font-semibold mb-1">
+                    Kapasitas Port (Mulai dari 2 Port)
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <select
+                      value={formCapacity}
+                      onChange={(e) => {
+                        setFormCapacity(e.target.value);
+                        if (e.target.value === '2') setFormSplitter('1:2 PLC Splitter');
+                        else if (e.target.value === '4') setFormSplitter('1:4 PLC Splitter');
+                        else if (e.target.value === '8') setFormSplitter('1:8 PLC Splitter');
+                        else if (e.target.value === '16') setFormSplitter('1:16 PLC Splitter');
+                        else if (e.target.value === '32') setFormSplitter('1:32 PLC Splitter');
+                      }}
+                      className="w-full bg-dark-900 border border-slate-700 rounded-lg p-2.5 text-slate-200 focus:outline-none focus:border-brand-500 font-mono"
+                    >
+                      <option value="2">2 Port (Splitter 1:2 / Coupler)</option>
+                      <option value="4">4 Port (Splitter 1:4)</option>
+                      <option value="8">8 Port (Splitter 1:8)</option>
+                      <option value="16">16 Port (Splitter 1:16)</option>
+                      <option value="24">24 Port</option>
+                      <option value="32">32 Port (Splitter 1:32)</option>
+                      <option value="48">48 Port (ODC 48 Core)</option>
+                      <option value="64">64 Port (Splitter 1:64)</option>
+                      <option value="96">96 Port (ODC 96 Core)</option>
+                      <option value="144">144 Port (ODC 144 Core)</option>
+                      <option value="288">288 Port (ODC 288 Core)</option>
+                    </select>
+
+                    <input
+                      type="number"
+                      min="2"
+                      placeholder="Custom..."
+                      value={formCapacity}
+                      onChange={(e) => setFormCapacity(e.target.value)}
+                      className="w-full bg-dark-900 border border-slate-700 rounded-lg p-2.5 text-slate-200 focus:outline-none focus:border-brand-500 font-mono"
+                    />
+                  </div>
                 </div>
               )}
 
