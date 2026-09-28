@@ -81,15 +81,36 @@ Agar modem pelanggan (Huawei, Zimlink, dll.) otomatis terhubung ke sistem ACS in
 ## 4. Status Fase Pengerjaan (Plan.md)
 
 - [x] **FASE 1: Infrastruktur dan GenieACS Core**
-  - [x] `docker-compose.yml` multi-container (CWMP, NBI internal, FS, UI, Mongo, Postgres PostGIS, Redis, Nginx)
+  - [x] `docker-compose.yml` multi-container (CWMP :7547, NBI internal :7557, FS, UI :3001, Mongo, Postgres PostGIS, Redis, Nginx)
   - [x] `.env.example` kredensial terisolasi
   - [x] `infra/nginx/default.conf` reverse proxy aman
   - [x] `infra/genieacs/provisions/default.js` (Periodic Inform 300s & refresh)
   - [x] `infra/genieacs/presets/00-default.json` (Event 0, 1, 2)
   - [x] Skrip sinkronisasi otomatis NBI `infra/genieacs/sync-genieacs.js`
-- [ ] **FASE 2: Device Profile dan Virtual Parameters**
-- [ ] **FASE 3: Backend Inti (NestJS + TypeORM + PostGIS + Remote Tasks)**
-- [ ] **FASE 4: OLT Collector (Hioso & Hisfocus SNMP/CLI Worker)**
-- [ ] **FASE 5: Frontend Dashboard & FTTH GIS Mapping (MapLibre GL)**
+- [x] **FASE 2: Device Profile dan Virtual Parameters**
+  - [x] Skrip Virtual Parameters GenieACS (`rxPower`, `ssid24`, `ssid5`, `pppoeUser`, `wanIP`, `uptime`, `model`, `firmware`)
+  - [x] Entitas database `DeviceProfile` & Default Profiles Seed (Semua lini Huawei: HG8245H5, HG8245H, HG8546M, HG8546M5, EG8145V5 Dual-Band, EG8141A5, HG8310M Bridge, dan Zimlink)
+  - [x] `ProfileResolverService` dengan resolusi OUI/ProductClass dan fallback aman
+  - [x] 4 unit tests lolos verifikasi (`profile-resolver.spec.ts`)
+- [x] **FASE 3: Backend Inti (NestJS + TypeORM + PostGIS + Remote Tasks)**
+  - [x] Database Schema lengkap (Users, Customers, Devices, OLT, PonPort, ONU, NetworkAsset, Cable, CoverageArea, Task, Alert, AuditLog)
+  - [x] Modul Auth (JWT, Refresh Token, Role Guards: ADMIN, NOC, TEKNISI, CS)
+  - [x] Modul Devices (Sinkronisasi NBI, assign customer, dan remote actions: Reboot, Reset, WiFi, PPPoE, Refresh)
+  - [x] Modul Tasks (`TaskPayloadBuilderService` dengan validasi kapabilitas) & Audit Logs
+  - [x] Modul Customers & Network Assets (GeoJSON export `/geo/devices` dan `/geo/assets` untuk GIS)
+  - [x] 6 unit tests lolos verifikasi (`task-payload-builder.spec.ts`)
+- [x] **FASE 4: OLT Collector (Hioso & Hisfocus SNMP/CLI Worker)**
+  - [x] Abstraksi `OltDriver` & `MockOltDriver`
+  - [x] `CliParserService` untuk membaca output status, sinyal optik dBm, dan jarak OLT Hioso / Hisfocus
+  - [x] Korelasi otomatis ONU ke modem ACS via MAC address (khusus EPON)
+  - [x] Deteksi gangguan massal (*Mass Outage*) dan klasifikasi kabel putus (LOS) vs mati listrik (Dying-Gasp)
+  - [x] 4 unit tests lolos verifikasi (`cli-parser.spec.ts`)
+- [x] **FASE 5: Frontend Dashboard & FTTH GIS Mapping (MapLibre GL)**
+  - [x] Desain modern ISP NOC (Dark Mode, Plus Jakarta Sans, JetBrains Mono)
+  - [x] Halaman GIS Mapping interaktif satelit Esri World Imagery dengan marker Server, ODC, ODP, ONT
+  - [x] Drawer detail perangkat dan aksi remote instan (Reboot, Ganti WiFi, Refresh, Factory Reset) dari peta
+  - [x] Halaman Dashboard (KPI 1.000 pelanggan, status OLT Hioso/Hisfocus, distribusi Huawei 76% & Zimlink 24%)
+  - [x] Halaman Devices, Pelanggan, Alerts & Gangguan, dan Pengaturan Sistem
+  - [x] Build produksi teruji (`dist/` siap deploy via Nginx)
 - [ ] **FASE 6: Monitoring, Alarm, Telegram Notifikasi**
 - [ ] **FASE 7: Hardening, Keamanan, Backup**
