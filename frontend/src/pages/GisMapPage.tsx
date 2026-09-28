@@ -1,53 +1,51 @@
 import React, { useEffect, useRef, useState } from 'react';
-import maplibregl from 'maplibre-gl';
-import 'maplibre-gl/dist/maplibre-gl.css';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 import {
-  Layers,
-  MapPin,
-  Wifi,
-  Activity,
+  Search,
+  Plus,
   Power,
+  Wifi,
   RotateCcw,
   Sliders,
   X,
-  Plus,
-  Search,
-  Server,
-  Cable,
-  Settings as SettingsIcon,
-  List,
   Map as MapIcon,
-  Radio,
-  Eye,
-  CheckCircle2,
-  AlertCircle,
-  HelpCircle,
+  List,
+  Settings as SettingsIcon,
 } from 'lucide-react';
 import { RemoteActionModal } from '../components/RemoteActionModal';
 
-// Koordinat Asli Air Naningan, Tanggamus, Lampung sesuai gambar user
-const CENTER_LNG = 104.7180;
+// Koordinat Presisi Air Naningan, Tanggamus, Lampung sesuai gambar user
 const CENTER_LAT = -5.2088;
+const CENTER_LNG = 104.7180;
 
-// Data Titik Jaringan FTTH sesuai landmark pada tangkapan layar user
+// Data Titik Node Jaringan (ODC, ODP, ONT, POI)
 const NETWORK_NODES = [
-  // Server & ODC
-  { id: 'srv-1', name: 'NOC / OLT Pusat Air Naningan', type: 'SERVER', lng: 104.7135, lat: -5.2045, color: '#A855F7' },
-  { id: 'odc-1', name: 'ODC 01 Simpang Pasar', type: 'ODC', capacity: 48, used: 28, lng: 104.7160, lat: -5.2065, color: '#2563EB' },
-  { id: 'odc-2', name: 'ODC 02 Sukajadi', type: 'ODC', capacity: 48, used: 22, lng: 104.7205, lat: -5.2095, color: '#2563EB' },
+  // Server Pusat
+  { id: 'srv-1', name: 'NOC / OLT Hioso Pusat', type: 'SERVER', lat: -5.2045, lng: 104.7135 },
 
-  // ODP Nodes (Cyan Lock/Distribution Points)
-  { id: 'odp-1', name: 'ODP-AN-01 (Masjid Syafiul Anam)', type: 'ODP', capacity: 16, used: 12, lng: 104.7145, lat: -5.2052, color: '#06B6D4' },
-  { id: 'odp-2', name: 'ODP-AN-02 (Lapangan Sepak Bola)', type: 'ODP', capacity: 16, used: 14, lng: 104.7158, lat: -5.2072, color: '#06B6D4' },
-  { id: 'odp-3', name: 'ODP-AN-03 (Rumah Baca Pada Suka)', type: 'ODP', capacity: 16, used: 8, lng: 104.7175, lat: -5.2060, color: '#06B6D4' },
-  { id: 'odp-4', name: 'ODP-AN-04 (Pasar Baru Sukajadi)', type: 'ODP', capacity: 16, used: 15, lng: 104.7200, lat: -5.2085, color: '#06B6D4' },
-  { id: 'odp-5', name: 'ODP-AN-05 (SMPN 1 Air Naningan)', type: 'ODP', capacity: 16, used: 10, lng: 104.7225, lat: -5.2105, color: '#06B6D4' },
-  { id: 'odp-6', name: 'ODP-AN-06 (SDN 3 Air Kubang)', type: 'ODP', capacity: 8, used: 7, lng: 104.7245, lat: -5.2120, color: '#06B6D4' },
-  { id: 'odp-7', name: 'ODP-AN-07 (Bumi Perkemahan)', type: 'ODP', capacity: 8, used: 6, lng: 104.7260, lat: -5.2140, color: '#06B6D4' },
-  { id: 'odp-8', name: 'ODP-AN-08 (SDN 1 Air Kubang)', type: 'ODP', capacity: 16, used: 13, lng: 104.7280, lat: -5.2165, color: '#06B6D4' },
-  { id: 'odp-9', name: 'ODP-AN-09 (Talang 20)', type: 'ODP', capacity: 8, used: 5, lng: 104.7215, lat: -5.2040, color: '#06B6D4' },
+  // ODC Nodes
+  { id: 'odc-1', name: 'ODC 01 Simpang Pasar', type: 'ODC', capacity: 48, used: 28, lat: -5.2065, lng: 104.7160 },
+  { id: 'odc-2', name: 'ODC 02 Sukajadi', type: 'ODC', capacity: 48, used: 22, lat: -5.2095, lng: 104.7205 },
 
-  // ONT Pelanggan (Hijau Normal, Kuning Redaman Buruk, Merah Offline)
+  // ODP Nodes (Cyan)
+  { id: 'odp-1', name: 'ODP-AN-01 (Masjid Syafiul Anam)', type: 'ODP', capacity: 16, used: 12, lat: -5.2052, lng: 104.7145 },
+  { id: 'odp-2', name: 'ODP-AN-02 (Lapangan Sepak Bola)', type: 'ODP', capacity: 16, used: 14, lat: -5.2072, lng: 104.7158 },
+  { id: 'odp-3', name: 'ODP-AN-03 (Rumah Baca Pada Suka)', type: 'ODP', capacity: 16, used: 8, lat: -5.2060, lng: 104.7175 },
+  { id: 'odp-4', name: 'ODP-AN-04 (Pasar Baru Sukajadi)', type: 'ODP', capacity: 16, used: 15, lat: -5.2085, lng: 104.7200 },
+  { id: 'odp-5', name: 'ODP-AN-05 (SMPN 1 Air Naningan)', type: 'ODP', capacity: 16, used: 10, lat: -5.2105, lng: 104.7225 },
+  { id: 'odp-6', name: 'ODP-AN-06 (SDN 3 Air Kubang)', type: 'ODP', capacity: 8, used: 7, lat: -5.2120, lng: 104.7245 },
+  { id: 'odp-7', name: 'ODP-AN-07 (Bumi Perkemahan)', type: 'ODP', capacity: 8, used: 6, lat: -5.2140, lng: 104.7260 },
+  { id: 'odp-8', name: 'ODP-AN-08 (SDN 1 Air Kubang)', type: 'ODP', capacity: 16, used: 13, lat: -5.2165, lng: 104.7280 },
+  { id: 'odp-9', name: 'ODP-AN-09 (Talang 20)', type: 'ODP', capacity: 8, used: 5, lat: -5.2040, lng: 104.7215 },
+  { id: 'odp-10', name: 'ODP-AN-10 (Margomulyo)', type: 'ODP', capacity: 16, used: 11, lat: -5.2090, lng: 104.7130 },
+
+  // POI Pins Landmark (Sesuai Screenshot User)
+  { id: 'poi-1', name: 'Talang 20, Air Naningan', type: 'POI', color: '#F97316', lat: -5.2038, lng: 104.7210 },
+  { id: 'poi-2', name: 'Air Terjun Keramat Sari', type: 'POI', color: '#A855F7', lat: -5.2065, lng: 104.7275 },
+  { id: 'poi-3', name: 'Spot Mancing', type: 'POI', color: '#EC4899', lat: -5.2075, lng: 104.7330 },
+
+  // ONT Pelanggan (Hijau Online, Kuning Warning, Merah Offline)
   {
     id: 'ont-1',
     name: 'Rumah Nanang',
@@ -58,9 +56,8 @@ const NETWORK_NODES = [
     rxPower: '-19.45',
     wanIp: '10.10.20.101',
     uptime: '14h 22m',
-    lng: 104.7240,
     lat: -5.2035,
-    color: '#10B981',
+    lng: 104.7240,
   },
   {
     id: 'ont-2',
@@ -72,9 +69,8 @@ const NETWORK_NODES = [
     rxPower: '-21.30',
     wanIp: '10.10.20.102',
     uptime: '3d 10h',
-    lng: 104.7255,
     lat: -5.2050,
-    color: '#10B981',
+    lng: 104.7255,
   },
   {
     id: 'ont-3',
@@ -83,12 +79,11 @@ const NETWORK_NODES = [
     serial: '5A494D4C00010203',
     model: 'Zimlink ZM-G100',
     status: 'ONLINE',
-    rxPower: '-24.60', // Kuning (Warning)
+    rxPower: '-24.60', // Warning (Kuning)
     wanIp: '10.10.20.103',
     uptime: '1d 04h',
-    lng: 104.7150,
     lat: -5.2078,
-    color: '#F59E0B',
+    lng: 104.7150,
   },
   {
     id: 'ont-4',
@@ -100,9 +95,8 @@ const NETWORK_NODES = [
     rxPower: 'LOS',
     wanIp: '10.10.20.104',
     uptime: 'Offline',
-    lng: 104.7275,
     lat: -5.2150,
-    color: '#EF4444',
+    lng: 104.7275,
   },
   {
     id: 'ont-5',
@@ -114,9 +108,8 @@ const NETWORK_NODES = [
     rxPower: '-18.80',
     wanIp: '10.10.20.105',
     uptime: '5d 12h',
-    lng: 104.7235,
     lat: -5.2115,
-    color: '#10B981',
+    lng: 104.7235,
   },
   {
     id: 'ont-6',
@@ -128,278 +121,215 @@ const NETWORK_NODES = [
     rxPower: '-20.10',
     wanIp: '10.10.20.106',
     uptime: '2d 08h',
-    lng: 104.7290,
     lat: -5.2180,
-    color: '#10B981',
+    lng: 104.7290,
   },
 ];
 
-// Jalur Kabel Fiber Optik (GeoJSON LineString menghubungkan antar aset)
-const FIBER_LINES_GEOJSON: GeoJSON.FeatureCollection = {
-  type: 'FeatureCollection',
-  features: [
-    {
-      type: 'Feature',
-      properties: { name: 'Feeder OLT to ODC 01', color: '#3B82F6' },
-      geometry: {
-        type: 'LineString',
-        coordinates: [
-          [104.7135, -5.2045],
-          [104.7145, -5.2052],
-          [104.7160, -5.2065],
-        ],
-      },
-    },
-    {
-      type: 'Feature',
-      properties: { name: 'Distribution ODC 01 to ODC 02', color: '#8B5CF6' },
-      geometry: {
-        type: 'LineString',
-        coordinates: [
-          [104.7160, -5.2065],
-          [104.7175, -5.2075],
-          [104.7205, -5.2095],
-        ],
-      },
-    },
-    {
-      type: 'Feature',
-      properties: { name: 'Branch to Talang 20', color: '#06B6D4' },
-      geometry: {
-        type: 'LineString',
-        coordinates: [
-          [104.7160, -5.2065],
-          [104.7185, -5.2050],
-          [104.7215, -5.2040],
-          [104.7240, -5.2035],
-          [104.7255, -5.2050],
-        ],
-      },
-    },
-    {
-      type: 'Feature',
-      properties: { name: 'Distribution South (Air Kubang)', color: '#3B82F6' },
-      geometry: {
-        type: 'LineString',
-        coordinates: [
-          [104.7205, -5.2095],
-          [104.7225, -5.2105],
-          [104.7245, -5.2120],
-          [104.7260, -5.2140],
-          [104.7275, -5.2150],
-          [104.7280, -5.2165],
-          [104.7290, -5.2180],
-        ],
-      },
-    },
+// Jalur Kabel Optik (Lines)
+const FIBER_ROUTES: [number, number][][] = [
+  // Jalur Utama dari OLT ke ODC 01 & Sukajadi
+  [
+    [-5.2045, 104.7135],
+    [-5.2052, 104.7145],
+    [-5.2065, 104.7160],
+    [-5.2075, 104.7175],
+    [-5.2095, 104.7205],
   ],
-};
+  // Cabang Talang 20 ke arah Timur
+  [
+    [-5.2065, 104.7160],
+    [-5.2050, 104.7185],
+    [-5.2040, 104.7215],
+    [-5.2035, 104.7240],
+    [-5.2050, 104.7255],
+    [-5.2065, 104.7275],
+  ],
+  // Cabang Selatan ke arah Air Kubang
+  [
+    [-5.2095, 104.7205],
+    [-5.2105, 104.7225],
+    [-5.2120, 104.7245],
+    [-5.2140, 104.7260],
+    [-5.2150, 104.7275],
+    [-5.2165, 104.7280],
+    [-5.2180, 104.7290],
+  ],
+  // Cabang Barat Margomulyo
+  [
+    [-5.2065, 104.7160],
+    [-5.2078, 104.7150],
+    [-5.2090, 104.7130],
+  ],
+];
 
 export const GisMapPage: React.FC = () => {
   const mapContainer = useRef<HTMLDivElement>(null);
-  const mapInstance = useRef<maplibregl.Map | null>(null);
+  const mapInstance = useRef<L.Map | null>(null);
 
   const [viewMode, setViewMode] = useState<'map' | 'list' | 'settings'>('map');
   const [selectedDevice, setSelectedDevice] = useState<any | null>(null);
   const [activeAction, setActiveAction] = useState<any | null>(null);
-  const [mapLoaded, setMapLoaded] = useState(false);
-
-  // Layer filter state
-  const [showServer, setShowServer] = useState(true);
-  const [showOdc, setShowOdc] = useState(true);
-  const [showOdp, setShowOdp] = useState(true);
-  const [showOnt, setShowOnt] = useState(true);
-  const [showLines, setShowLines] = useState(true);
 
   useEffect(() => {
     if (!mapContainer.current) return;
 
-    // Bersihkan map instance lama jika ada
+    // Bersihkan map instance lama jika sudah ada
     if (mapInstance.current) {
       mapInstance.current.remove();
       mapInstance.current = null;
     }
 
-    // Inisialisasi Peta MapLibre GL dengan Google Hybrid Satellite Tiles (Satelit + Label Jalan seperti di foto)
-    const map = new maplibregl.Map({
-      container: mapContainer.current,
-      style: {
-        version: 8,
-        sources: {
-          'google-hybrid': {
-            type: 'raster',
-            tiles: [
-              'https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
-              'https://mt2.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
-            ],
-            tileSize: 256,
-          },
-        },
-        layers: [
-          {
-            id: 'google-hybrid-layer',
-            type: 'raster',
-            source: 'google-hybrid',
-            minzoom: 0,
-            maxzoom: 20,
-          },
-        ],
-      },
-      center: [CENTER_LNG, CENTER_LAT], // Posisi pas di Air Naningan, Tanggamus
-      zoom: 15.2,
-      pitch: 0,
+    // Inisialisasi Leaflet Map dengan Zoom Control Default (Sama persis seperti gambar user)
+    const map = L.map(mapContainer.current, {
+      center: [CENTER_LAT, CENTER_LNG],
+      zoom: 15,
+      zoomControl: true,
     });
 
-    map.addControl(new maplibregl.NavigationControl({ showCompass: true }), 'top-left');
+    // Layer Satelit Google Hybrid (Citra Satelit + Nama Jalan & Tempat Resmi)
+    L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
+      maxZoom: 20,
+      attribution: '&copy; Google Maps Hybrid',
+    }).addTo(map);
 
-    map.on('load', () => {
-      setMapLoaded(true);
-      map.resize();
+    // 1. Gambar Garis Jalur Kabel Fiber Optik (Fiber Lines)
+    FIBER_ROUTES.forEach((route) => {
+      // Garis Glow luar
+      L.polyline(route, {
+        color: '#3B82F6',
+        weight: 6,
+        opacity: 0.35,
+        lineCap: 'round',
+        lineJoin: 'round',
+      }).addTo(map);
 
-      // 1. Tambahkan GeoJSON Layer Garis Fiber Optik (Polyline)
-      map.addSource('fiber-lines', {
-        type: 'geojson',
-        data: FIBER_LINES_GEOJSON,
-      });
-
-      // Garis Glow / Outline Kabel
-      map.addLayer({
-        id: 'fiber-lines-glow',
-        type: 'line',
-        source: 'fiber-lines',
-        layout: {
-          'line-join': 'round',
-          'line-cap': 'round',
-        },
-        paint: {
-          'line-color': '#60A5FA',
-          'line-width': 6,
-          'line-opacity': 0.4,
-        },
-      });
-
-      // Garis Inti Kabel (Dashed / Solid)
-      map.addLayer({
-        id: 'fiber-lines-core',
-        type: 'line',
-        source: 'fiber-lines',
-        layout: {
-          'line-join': 'round',
-          'line-cap': 'round',
-        },
-        paint: {
-          'line-color': '#93C5FD',
-          'line-width': 2.5,
-          'line-dasharray': [2, 1], // Efek garis putus-putus seperti di foto
-        },
-      });
-
-      // 2. Render Markers Aset & Perangkat di Atas Peta
-      NETWORK_NODES.forEach((node) => {
-        const el = document.createElement('div');
-        el.className = 'network-marker group relative cursor-pointer flex items-center justify-center transition-transform hover:scale-125';
-
-        if (node.type === 'SERVER') {
-          el.innerHTML = `
-            <div class="w-8 h-8 rounded-full bg-purple-600 text-white flex items-center justify-center shadow-2xl ring-2 ring-white">
-              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect width="20" height="8" x="2" y="2" rx="2"/><rect width="20" height="8" x="2" y="14" rx="2"/><line x1="6" x2="6.01" y1="6" y2="6"/><line x1="6" x2="6.01" y1="18" y2="18"/></svg>
-            </div>
-            <div class="absolute -bottom-5 whitespace-nowrap px-1.5 py-0.5 rounded bg-dark-900/90 text-[10px] text-white font-bold border border-slate-700 shadow-md">
-              ${node.name}
-            </div>
-          `;
-        } else if (node.type === 'ODC') {
-          el.innerHTML = `
-            <div class="w-7 h-7 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-xl ring-2 ring-white">
-              <span class="text-[9px] font-extrabold font-mono">ODC</span>
-            </div>
-          `;
-        } else if (node.type === 'ODP') {
-          el.innerHTML = `
-            <div class="w-6 h-6 rounded-full bg-cyan-500 text-white flex items-center justify-center shadow-lg ring-2 ring-white">
-              <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-            </div>
-          `;
-        } else if (node.type === 'ONT') {
-          const isOffline = node.status === 'OFFLINE';
-          const isWarn = node.status === 'ONLINE' && parseFloat(node.rxPower) < -24.0;
-          const bgCol = isOffline ? 'bg-rose-600' : isWarn ? 'bg-amber-500' : 'bg-emerald-500';
-          const pulseCol = isOffline ? 'animate-ping' : '';
-
-          el.innerHTML = `
-            <div class="w-6 h-6 rounded-full ${bgCol} text-white flex items-center justify-center shadow-xl ring-2 ring-white ${pulseCol}">
-              <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>
-            </div>
-            <div class="absolute -top-5 whitespace-nowrap px-1.5 py-0.5 rounded bg-dark-900/90 text-[10px] text-slate-100 font-semibold border border-slate-700 shadow-md">
-              ${node.name}
-            </div>
-          `;
-
-          el.addEventListener('click', () => {
-            setSelectedDevice(node);
-          });
-        }
-
-        new maplibregl.Marker({ element: el })
-          .setLngLat([node.lng, node.lat])
-          .addTo(map);
-      });
+      // Garis Inti Putus-putus
+      L.polyline(route, {
+        color: '#93C5FD',
+        weight: 2.5,
+        dashArray: '6, 6',
+        opacity: 0.95,
+      }).addTo(map);
     });
 
-    // Panggil map.resize() secara berkala pada awal render untuk mencegah blank canvas
-    const timer = setTimeout(() => {
-      map.resize();
-    }, 250);
+    // 2. Render Marker Aset & Perangkat
+    NETWORK_NODES.forEach((node) => {
+      let iconHtml = '';
+
+      if (node.type === 'SERVER') {
+        iconHtml = `
+          <div style="background-color: #A855F7; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.5); border: 2px solid #ffffff;">
+            <svg style="width: 16px; height: 16px; color: white;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect width="20" height="8" x="2" y="2" rx="2"/><rect width="20" height="8" x="2" y="14" rx="2"/><line x1="6" x2="6.01" y1="6" y2="6"/><line x1="6" x2="6.01" y1="18" y2="18"/></svg>
+          </div>
+        `;
+      } else if (node.type === 'ODC') {
+        iconHtml = `
+          <div style="background-color: #2563EB; width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 8px rgba(0,0,0,0.4); border: 2px solid #ffffff;">
+            <span style="color: white; font-size: 8px; font-weight: 900; font-family: monospace;">ODC</span>
+          </div>
+        `;
+      } else if (node.type === 'ODP') {
+        iconHtml = `
+          <div style="background-color: #06B6D4; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 8px rgba(0,0,0,0.4); border: 2px solid #ffffff;">
+            <svg style="width: 12px; height: 12px; color: white;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          </div>
+        `;
+      } else if (node.type === 'POI') {
+        iconHtml = `
+          <div style="background-color: ${node.color || '#F97316'}; width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 8px rgba(0,0,0,0.4); border: 2px solid #ffffff;">
+            <svg style="width: 12px; height: 12px; color: white;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+          </div>
+        `;
+      } else if (node.type === 'ONT') {
+        const isOffline = node.status === 'OFFLINE';
+        const isWarn = node.status === 'ONLINE' && parseFloat(node.rxPower) < -24.0;
+        const bgCol = isOffline ? '#DC2626' : isWarn ? '#D97706' : '#10B981';
+
+        iconHtml = `
+          <div style="background-color: ${bgCol}; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.5); border: 2px solid #ffffff;">
+            <svg style="width: 13px; height: 13px; color: white;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>
+          </div>
+        `;
+      }
+
+      const customIcon = L.divIcon({
+        className: 'custom-map-icon',
+        html: iconHtml,
+        iconSize: [28, 28],
+        iconAnchor: [14, 14],
+      });
+
+      const marker = L.marker([node.lat, node.lng], { icon: customIcon }).addTo(map);
+
+      // Label tooltip saat hover
+      marker.bindTooltip(`<b>${node.name}</b>`, {
+        direction: 'top',
+        offset: [0, -10],
+        className: 'custom-tooltip',
+      });
+
+      if (node.type === 'ONT') {
+        marker.on('click', () => {
+          setSelectedDevice(node);
+        });
+      }
+    });
+
+    // Invalidate size agar tidak ada visual glitch
+    setTimeout(() => {
+      map.invalidateSize();
+    }, 200);
 
     mapInstance.current = map;
 
     return () => {
-      clearTimeout(timer);
       map.remove();
+      mapInstance.current = null;
     };
   }, []);
 
   return (
     <div className="relative w-full h-[calc(100vh-4rem)] bg-dark-900 overflow-hidden select-none">
-      {/* Map Container */}
-      <div ref={mapContainer} className="w-full h-full" />
+      {/* Container Peta Leaflet */}
+      <div ref={mapContainer} className="w-full h-full z-0" />
 
-      {/* Top Controls Bar (Matching TAMA NETWORK Screenshot Exactly) */}
-      <div className="absolute top-4 left-4 right-4 z-20 flex flex-wrap items-center justify-between gap-3 pointer-events-none">
-        {/* Left Action Buttons */}
-        <div className="flex items-center gap-2 pointer-events-auto bg-dark-900/90 backdrop-blur-md p-1.5 rounded-2xl border border-slate-700/80 shadow-2xl">
-          <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-emerald-600/20 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-600/30 transition-colors">
+      {/* Top Header Buttons (Sama Persis TAMA NETWORK) */}
+      <div className="absolute top-3 left-16 right-4 z-[1000] flex flex-wrap items-center justify-between gap-3 pointer-events-none">
+        {/* Tombol Quick Action */}
+        <div className="flex items-center gap-1.5 pointer-events-auto bg-dark-900/90 backdrop-blur-md p-1.5 rounded-xl border border-slate-700/80 shadow-2xl">
+          <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600/20 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-600/30 transition-colors">
             <Search className="w-3.5 h-3.5" />
             <span>Search</span>
           </button>
 
-          <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-purple-600 text-white hover:bg-purple-500 transition-colors">
+          <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-purple-600 text-white hover:bg-purple-500 transition-colors">
             <Plus className="w-3.5 h-3.5" />
             <span>Server</span>
           </button>
 
-          <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-blue-600 text-white hover:bg-blue-500 transition-colors">
+          <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 text-white hover:bg-blue-500 transition-colors">
             <Plus className="w-3.5 h-3.5" />
             <span>ODC</span>
           </button>
 
-          <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-cyan-600 text-white hover:bg-cyan-500 transition-colors">
+          <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-cyan-600 text-white hover:bg-cyan-500 transition-colors">
             <Plus className="w-3.5 h-3.5" />
             <span>ODP</span>
           </button>
 
-          <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-emerald-600 text-white hover:bg-emerald-500 transition-colors">
+          <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 text-white hover:bg-emerald-500 transition-colors">
             <Plus className="w-3.5 h-3.5" />
             <span>ONT</span>
           </button>
 
-          <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-indigo-600 text-white hover:bg-indigo-500 transition-colors">
+          <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600 text-white hover:bg-indigo-500 transition-colors">
             <Plus className="w-3.5 h-3.5" />
             <span>Fiber Line</span>
           </button>
         </div>
 
-        {/* Right View Mode Switcher (Map, List, Settings) */}
+        {/* Switcher Map | List | Settings */}
         <div className="flex items-center pointer-events-auto bg-dark-900/90 backdrop-blur-md p-1 rounded-xl border border-slate-700/80 shadow-2xl">
           <button
             onClick={() => setViewMode('map')}
@@ -433,9 +363,9 @@ export const GisMapPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Slide-over Device Detail Panel (Muncul Saat Marker ONT Diklik) */}
+      {/* Slide-over Device Detail Panel (Drawer Saat Titik Diklik) */}
       {selectedDevice && (
-        <div className="absolute top-20 right-4 w-96 bg-dark-800/95 backdrop-blur-md border border-slate-700/90 rounded-2xl p-5 shadow-2xl space-y-4 z-30 animate-slideIn">
+        <div className="absolute top-20 right-4 w-96 bg-dark-800/95 backdrop-blur-md border border-slate-700/90 rounded-2xl p-5 shadow-2xl space-y-4 z-[1001] animate-slideIn">
           <div className="flex items-start justify-between border-b border-slate-700 pb-3">
             <div>
               <div className="flex items-center gap-2">

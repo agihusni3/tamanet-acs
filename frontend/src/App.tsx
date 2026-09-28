@@ -7,6 +7,7 @@ import { GisMapPage } from './pages/GisMapPage';
 import { CustomersPage } from './pages/CustomersPage';
 import { AlertsPage } from './pages/AlertsPage';
 import { SettingsPage } from './pages/SettingsPage';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 export function App() {
   const [activeTab, setActiveTab] = useState('mapping'); // Default ke mapping sesuai preferensi user
@@ -23,12 +24,14 @@ export function App() {
 
         {/* Dynamic Page Views */}
         <main className="flex-1 overflow-y-auto">
-          {activeTab === 'dashboard' && <DashboardPage onNavigate={setActiveTab} />}
-          {activeTab === 'devices' && <DevicesPage />}
-          {activeTab === 'mapping' && <GisMapPage />}
-          {activeTab === 'faults' && <AlertsPage />}
-          {activeTab === 'customers' && <CustomersPage />}
-          {activeTab === 'settings' && <SettingsPage />}
+          <ErrorBoundary>
+            {activeTab === 'dashboard' && <DashboardPage onNavigate={setActiveTab} />}
+            {activeTab === 'devices' && <DevicesPage />}
+            {activeTab === 'mapping' && <GisMapPage />}
+            {activeTab === 'faults' && <AlertsPage />}
+            {activeTab === 'customers' && <CustomersPage />}
+            {activeTab === 'settings' && <SettingsPage />}
+          </ErrorBoundary>
         </main>
       </div>
     </div>
