@@ -33,14 +33,35 @@ async function bootstrap() {
 
   const allowedOrigins = Array.from(new Set([...defaultLocalOrigins, ...configuredOrigins]));
 
+  const isPrivateOrLanOrigin = (originUrl: string): boolean => {
+    try {
+      const { hostname } = new URL(originUrl);
+      return (
+        hostname === 'localhost' ||
+        hostname === '127.0.0.1' ||
+        /^192\.168\.\d{1,3}\.\d{1,3}$/.test(hostname) ||
+        /^10\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(hostname) ||
+        /^172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}$/.test(hostname) ||
+        /^100\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(hostname)
+      );
+    } catch {
+      return false;
+    }
+  };
+
   app.enableCors({
     origin: (origin, callback) => {
-      // Izinkan request tanpa origin (curl, mobile apps, local server-to-server)
-      if (!origin || allowedOrigins.includes(origin) || process.env.NODE_ENV !== 'production') {
+      // Izinkan request tanpa origin, origin yang terkonfigurasi, serta seluruh IP LAN/Private/VPN
+      if (
+        !origin ||
+        allowedOrigins.includes(origin) ||
+        isPrivateOrLanOrigin(origin) ||
+        process.env.NODE_ENV !== 'production'
+      ) {
         callback(null, true);
       } else {
-        logger.warn(`[Security Alert] Akses CORS ditolak untuk origin tidak sah: ${origin}`);
-        callback(new Error('Akses ditolak oleh kebijakan keamanan CORS'));
+        logger.warn(`[Security Alert] Akses CORS ditolak untuk origin luar tidak sah: ${origin}`);
+        callback(null, false);
       }
     },
     methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
