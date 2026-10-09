@@ -46,23 +46,57 @@ export class NetworkAssetsService {
     lat?: number;
     lng?: number;
   }) {
+    let geom: string | null = null;
+    if (data.lat != null && data.lng != null) {
+      const latNum = Number(data.lat);
+      const lngNum = Number(data.lng);
+      if (!isNaN(latNum) && !isNaN(lngNum) && latNum >= -90 && latNum <= 90 && lngNum >= -180 && lngNum <= 180) {
+        geom = `SRID=4326;POINT(${lngNum.toFixed(7)} ${latNum.toFixed(7)})`;
+      }
+    }
+
     const asset = this.assetRepo.create({
       type: data.type,
       name: data.name,
       capacity: data.capacity || 8,
       used: data.used || 0,
       parentId: data.parentId || null,
-      geom: data.lat && data.lng ? `SRID=4326;POINT(${data.lng} ${data.lat})` : null,
+      geom,
     });
     return this.assetRepo.save(asset);
   }
 
-  async updateAsset(id: string, data: Partial<NetworkAsset> & { lat?: number; lng?: number }) {
+  async updateAsset(
+    id: string,
+    data: {
+      type?: AssetType;
+      name?: string;
+      capacity?: number;
+      used?: number;
+      parentId?: string;
+      lat?: number;
+      lng?: number;
+    },
+  ) {
     const asset = await this.findOneAsset(id);
-    if (data.lat !== undefined && data.lng !== undefined) {
-      asset.geom = `SRID=4326;POINT(${data.lng} ${data.lat})`;
+    if (data.type !== undefined) asset.type = data.type;
+    if (data.name !== undefined) asset.name = data.name;
+    if (data.capacity !== undefined) asset.capacity = data.capacity;
+    if (data.used !== undefined) asset.used = data.used;
+    if (data.parentId !== undefined) asset.parentId = data.parentId || null;
+
+    if (data.lat !== undefined || data.lng !== undefined) {
+      if (data.lat != null && data.lng != null) {
+        const latNum = Number(data.lat);
+        const lngNum = Number(data.lng);
+        if (!isNaN(latNum) && !isNaN(lngNum) && latNum >= -90 && latNum <= 90 && lngNum >= -180 && lngNum <= 180) {
+          asset.geom = `SRID=4326;POINT(${lngNum.toFixed(7)} ${latNum.toFixed(7)})`;
+        }
+      } else {
+        asset.geom = null;
+      }
     }
-    Object.assign(asset, data);
+
     return this.assetRepo.save(asset);
   }
 
@@ -86,11 +120,27 @@ export class NetworkAssetsService {
     fromAssetId?: string;
     toAssetId?: string;
     coordinates?: [number, number][]; // [[lng, lat], [lng, lat], ...]
+    notes?: string;
   }) {
-    let geomStr = null;
-    if (data.coordinates && data.coordinates.length >= 2) {
-      const linePoints = data.coordinates.map(([lng, lat]) => `${lng} ${lat}`).join(', ');
-      geomStr = `SRID=4326;LINESTRING(${linePoints})`;
+    let geomStr: string | null = null;
+    if (data.coordinates && Array.isArray(data.coordinates) && data.coordinates.length >= 2) {
+      const validPoints = data.coordinates.filter(
+        (pt) =>
+          Array.isArray(pt) &&
+          pt.length >= 2 &&
+          !isNaN(Number(pt[0])) &&
+          !isNaN(Number(pt[1])) &&
+          Number(pt[1]) >= -90 &&
+          Number(pt[1]) <= 90 &&
+          Number(pt[0]) >= -180 &&
+          Number(pt[0]) <= 180,
+      );
+      if (validPoints.length >= 2) {
+        const linePoints = validPoints
+          .map(([lng, lat]) => `${Number(lng).toFixed(7)} ${Number(lat).toFixed(7)}`)
+          .join(', ');
+        geomStr = `SRID=4326;LINESTRING(${linePoints})`;
+      }
     }
 
     const cable = this.cableRepo.create({
@@ -100,8 +150,69 @@ export class NetworkAssetsService {
       fromAssetId: data.fromAssetId || null,
       toAssetId: data.toAssetId || null,
       geom: geomStr,
+      notes: data.notes || null,
     });
     return this.cableRepo.save(cable);
+  }
+
+  async findOneCable(id: string) {
+    const cable = await this.cableRepo.findOne({
+      where: { id },
+      relations: ['fromAsset', 'toAsset'],
+    });
+    if (!cable) {
+      throw new NotFoundException(`Kabel '${id}' tidak ditemukan`);
+    }
+    return cable;
+  }
+
+  async updateCable(
+    id: string,
+    data: {
+      name?: string;
+      type?: string;
+      coreCount?: number;
+      fromAssetId?: string;
+      toAssetId?: string;
+      coordinates?: [number, number][];
+      notes?: string;
+    },
+  ) {
+    const cable = await this.findOneCable(id);
+    if (data.name !== undefined) cable.name = data.name;
+    if (data.type !== undefined) cable.type = data.type;
+    if (data.coreCount !== undefined) cable.coreCount = data.coreCount;
+    if (data.fromAssetId !== undefined) cable.fromAssetId = data.fromAssetId || null;
+    if (data.toAssetId !== undefined) cable.toAssetId = data.toAssetId || null;
+    if (data.notes !== undefined) cable.notes = data.notes || null;
+
+    if (data.coordinates && Array.isArray(data.coordinates) && data.coordinates.length >= 2) {
+      const validPoints = data.coordinates.filter(
+        (pt) =>
+          Array.isArray(pt) &&
+          pt.length >= 2 &&
+          !isNaN(Number(pt[0])) &&
+          !isNaN(Number(pt[1])) &&
+          Number(pt[1]) >= -90 &&
+          Number(pt[1]) <= 90 &&
+          Number(pt[0]) >= -180 &&
+          Number(pt[0]) <= 180,
+      );
+      if (validPoints.length >= 2) {
+        const linePoints = validPoints
+          .map(([lng, lat]) => `${Number(lng).toFixed(7)} ${Number(lat).toFixed(7)}`)
+          .join(', ');
+        cable.geom = `SRID=4326;LINESTRING(${linePoints})`;
+      }
+    }
+
+    return this.cableRepo.save(cable);
+  }
+
+  async removeCable(id: string) {
+    const cable = await this.findOneCable(id);
+    await this.cableRepo.remove(cable);
+    return { success: true };
   }
 
   // ===========================================================================
@@ -120,10 +231,18 @@ export class NetworkAssetsService {
 
     const features = assets.map((a) => {
       let coordinates: [number, number] = [104.7876, -5.3214]; // Fallback Tanggamus
-      if (a.geom && typeof a.geom === 'string' && a.geom.includes('POINT')) {
-        const match = a.geom.match(/POINT\(([^ ]+) ([^)]+)\)/);
-        if (match) {
-          coordinates = [parseFloat(match[1]), parseFloat(match[2])];
+      if (a.geom && typeof a.geom === 'string') {
+        const start = a.geom.indexOf('POINT(');
+        const end = a.geom.indexOf(')', start);
+        if (start !== -1 && end !== -1) {
+          const parts = a.geom.substring(start + 6, end).trim().split(/\s+/);
+          if (parts.length >= 2) {
+            const lng = parseFloat(parts[0]);
+            const lat = parseFloat(parts[1]);
+            if (!isNaN(lng) && !isNaN(lat)) {
+              coordinates = [lng, lat];
+            }
+          }
         }
       }
 
@@ -159,10 +278,18 @@ export class NetworkAssetsService {
       .filter((d) => d.customer && d.customer.geom)
       .map((d) => {
         let coordinates: [number, number] = [104.7876, -5.3214];
-        if (d.customer?.geom) {
-          const match = d.customer.geom.match(/POINT\(([^ ]+) ([^)]+)\)/);
-          if (match) {
-            coordinates = [parseFloat(match[1]), parseFloat(match[2])];
+        if (d.customer?.geom && typeof d.customer.geom === 'string') {
+          const start = d.customer.geom.indexOf('POINT(');
+          const end = d.customer.geom.indexOf(')', start);
+          if (start !== -1 && end !== -1) {
+            const parts = d.customer.geom.substring(start + 6, end).trim().split(/\s+/);
+            if (parts.length >= 2) {
+              const lng = parseFloat(parts[0]);
+              const lat = parseFloat(parts[1]);
+              if (!isNaN(lng) && !isNaN(lat)) {
+                coordinates = [lng, lat];
+              }
+            }
           }
         }
 

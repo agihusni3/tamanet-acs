@@ -12,9 +12,11 @@ import { RolesGuard } from './roles.guard';
   imports: [
     TypeOrmModule.forFeature([User]),
     PassportModule.register({ defaultStrategy: 'jwt' }),
-    JwtModule.register({
-      secret: process.env.JWT_SECRET || 'super_secret_jwt_key_replace_with_random_64_chars_min',
-      signOptions: { expiresIn: '1d' },
+    JwtModule.registerAsync({
+      useFactory: () => ({
+        secret: process.env.JWT_SECRET || 'super_secret_jwt_key_replace_with_random_64_chars_min',
+        signOptions: { expiresIn: process.env.JWT_EXPIRES_IN || '1d' },
+      }),
     }),
   ],
   controllers: [AuthController],
@@ -22,3 +24,4 @@ import { RolesGuard } from './roles.guard';
   exports: [AuthService, RolesGuard, PassportModule, JwtModule],
 })
 export class AuthModule {}
+

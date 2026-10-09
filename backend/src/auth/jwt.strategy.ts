@@ -4,6 +4,7 @@ import { ExtractJwt, Strategy } from 'passport-jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from '../users/user.entity';
+import { getJwtSecret } from '../common/security-config';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
@@ -14,7 +15,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey: process.env.JWT_SECRET || 'super_secret_jwt_key_replace_with_random_64_chars_min',
+      secretOrKey: getJwtSecret(),
     });
   }
 
@@ -23,6 +24,16 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     if (!user) {
       throw new UnauthorizedException('Sesi tidak valid atau akun dinonaktifkan');
     }
+
+    // Mitigasi ATK-04 & VULN-13: Validasi tokenVersion untuk pembatalan instan Access Token
+    if (
+      payload.tokenVersion !== undefined &&
+      user.tokenVersion !== undefined &&
+      payload.tokenVersion !== user.tokenVersion
+    ) {
+      throw new UnauthorizedException('Sesi telah dicabut (logout atau pergantian password). Silakan login kembali.');
+    }
+
     return {
       id: user.id,
       username: user.username,

@@ -8,6 +8,8 @@ services:
     restart: unless-stopped
     environment:
       MONGO_INITDB_DATABASE: ${MONGO_DB:-genieacs}
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER:-mongo_admin}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:-mongo_super_secret_change_me}
     volumes:
       - mongo_data:/data/db
     networks:
@@ -42,6 +44,7 @@ services:
     image: redis:7-alpine
     container_name: acs_redis
     restart: unless-stopped
+    command: redis-server --requirepass ${REDIS_PASSWORD:-ChangeMeSecureRedis2026!}
     volumes:
       - redis_data:/data
     ports:
@@ -49,7 +52,7 @@ services:
     networks:
       - acs_net
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-ChangeMeSecureRedis2026!}", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -61,20 +64,20 @@ services:
     image: drumsergio/genieacs:latest
     container_name: acs_genieacs_cwmp
     restart: unless-stopped
-    command: genieacs-cwmp
+    command: /opt/genieacs/dist/bin/genieacs-cwmp
     depends_on:
       mongo:
         condition: service_healthy
     environment:
-      GENIEACS_MONGODB_CONNECTION_URL: mongodb://mongo:27017/${MONGO_DB:-genieacs}
-      GENIEACS_CWMP_PORT: 7547
+      GENIEACS_MONGODB_CONNECTION_URL: mongodb://${MONGO_ROOT_USER:-mongo_admin}:${MONGO_ROOT_PASSWORD:-mongo_super_secret_change_me}@mongo:27017/${MONGO_DB:-genieacs}?authSource=admin
+      GENIEACS_CWMP_PORT: 7548
       GENIEACS_CWMP_IP: 0.0.0.0
-      GENIEACS_EXT_URL: ${GENIEACS_EXT_URL:-http://192.168.100.1:7547/}
+      GENIEACS_EXT_URL: ${GENIEACS_EXT_URL:-http://localhost:7548/}
       GENIEACS_FS_IP: genieacs-fs
       GENIEACS_FS_PORT: 7567
     ports:
-      # Port CWMP 7547 TERBUKA KE JARINGAN MODEM / VLAN MANAJEMEN
-      - "0.0.0.0:7547:7547"
+      # Port CWMP 7548 TERBUKA KE JARINGAN MODEM / VLAN MANAJEMEN
+      - "0.0.0.0:7548:7548"
     networks:
       - acs_net
 
@@ -82,12 +85,12 @@ services:
     image: drumsergio/genieacs:latest
     container_name: acs_genieacs_nbi
     restart: unless-stopped
-    command: genieacs-nbi
+    command: /opt/genieacs/dist/bin/genieacs-nbi
     depends_on:
       mongo:
         condition: service_healthy
     environment:
-      GENIEACS_MONGODB_CONNECTION_URL: mongodb://mongo:27017/${MONGO_DB:-genieacs}
+      GENIEACS_MONGODB_CONNECTION_URL: mongodb://${MONGO_ROOT_USER:-mongo_admin}:${MONGO_ROOT_PASSWORD:-mongo_super_secret_change_me}@mongo:27017/${MONGO_DB:-genieacs}?authSource=admin
       GENIEACS_NBI_PORT: 7557
       GENIEACS_NBI_IP: 0.0.0.0
     # NBI HANYA DIAKSES INTERNAL OLEH BACKEND (tidak diekspos ke publik)
@@ -95,17 +98,23 @@ services:
       - "127.0.0.1:7557:7557"
     networks:
       - acs_net
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:7557/devices/ || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 6
+      start_period: 20s
 
   genieacs-fs:
     image: drumsergio/genieacs:latest
     container_name: acs_genieacs_fs
     restart: unless-stopped
-    command: genieacs-fs
+    command: /opt/genieacs/dist/bin/genieacs-fs
     depends_on:
       mongo:
         condition: service_healthy
     environment:
-      GENIEACS_MONGODB_CONNECTION_URL: mongodb://mongo:27017/${MONGO_DB:-genieacs}
+      GENIEACS_MONGODB_CONNECTION_URL: mongodb://${MONGO_ROOT_USER:-mongo_admin}:${MONGO_ROOT_PASSWORD:-mongo_super_secret_change_me}@mongo:27017/${MONGO_DB:-genieacs}?authSource=admin
       GENIEACS_FS_PORT: 7567
       GENIEACS_FS_IP: 0.0.0.0
     ports:
@@ -117,17 +126,41 @@ services:
     image: drumsergio/genieacs:latest
     container_name: acs_genieacs_ui
     restart: unless-stopped
-    command: genieacs-ui
+    command: /opt/genieacs/dist/bin/genieacs-ui
     depends_on:
       mongo:
         condition: service_healthy
     environment:
-      GENIEACS_MONGODB_CONNECTION_URL: mongodb://mongo:27017/${MONGO_DB:-genieacs}
+      GENIEACS_MONGODB_CONNECTION_URL: mongodb://${MONGO_ROOT_USER:-mongo_admin}:${MONGO_ROOT_PASSWORD:-mongo_super_secret_change_me}@mongo:27017/${MONGO_DB:-genieacs}?authSource=admin
       GENIEACS_UI_PORT: 3000
       GENIEACS_UI_IP: 0.0.0.0
+      GENIEACS_UI_JWT_SECRET: ${GENIEACS_UI_JWT_SECRET:-super_secret_genieacs_ui_jwt_key_2026}
     # UI GENIEACS HANYA INTERNAL/MANAGEMENT (Port 3001 di localhost)
     ports:
       - "127.0.0.1:3001:3000"
+    networks:
+      - acs_net
+
+  # ============================================================================
+  # GENIEACS INIT — Push provisions/presets/VPs ke NBI (one-shot)
+  # ============================================================================
+  genieacs-init:
+    image: node:20-alpine
+    container_name: acs_genieacs_init
+    restart: "no"
+    depends_on:
+      genieacs-nbi:
+        condition: service_healthy
+    environment:
+      GENIEACS_NBI_URL: http://genieacs-nbi:7557
+      GENIEACS_CR_USERNAME: ${GENIEACS_CR_USERNAME:-cr_admin}
+      GENIEACS_CR_PASSWORD: ${GENIEACS_CR_PASSWORD:-cr_secret_password_random}
+      GENIEACS_CPE_USERNAME: ${GENIEACS_CPE_USERNAME:-acs_user}
+      GENIEACS_CPE_PASSWORD: ${GENIEACS_CPE_PASSWORD:-acs_password_secret_cpe}
+    volumes:
+      - ./infra/genieacs:/app
+    working_dir: /app
+    command: node sync-genieacs.js --no-wait
     networks:
       - acs_net
 
@@ -154,6 +187,7 @@ services:
       GENIEACS_NBI_URL: http://genieacs-nbi:7557
       REDIS_HOST: redis
       REDIS_PORT: 6379
+      NODE_ENV: ${NODE_ENV:-development}
     ports:
       - "127.0.0.1:4000:4000"
     networks:

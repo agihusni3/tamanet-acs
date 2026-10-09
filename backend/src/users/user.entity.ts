@@ -37,6 +37,9 @@ export class User {
   @Column({ default: true })
   active: boolean;
 
+  @Column({ name: 'token_version', default: 0 })
+  tokenVersion: number;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 

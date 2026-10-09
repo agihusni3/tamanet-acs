@@ -21,6 +21,7 @@ export interface ResolvedProfileResult {
 @Injectable()
 export class ProfileResolverService {
   private readonly logger = new Logger(ProfileResolverService.name);
+  private readonly cache = new Map<string, ResolvedProfileResult>();
 
   constructor(
     @InjectRepository(DeviceProfile)
@@ -34,7 +35,18 @@ export class ProfileResolverService {
     const oui = query.oui?.trim().toUpperCase() || '';
     const productClass = query.productClass?.trim() || '';
     const manufacturer = query.manufacturer?.trim().toLowerCase() || '';
+    const cacheKey = `${oui}::${productClass}::${manufacturer}`;
 
+    if (this.cache.has(cacheKey)) {
+      return this.cache.get(cacheKey)!;
+    }
+
+    const result = await this.doResolve(oui, productClass, manufacturer);
+    this.cache.set(cacheKey, result);
+    return result;
+  }
+
+  private async doResolve(oui: string, productClass: string, manufacturer: string): Promise<ResolvedProfileResult> {
     // 1. Coba pencocokan exact OUI + ProductClass
     if (oui && productClass) {
       const exactMatch = await this.profileRepo.findOne({
@@ -50,7 +62,7 @@ export class ProfileResolverService {
       }
     }
 
-    // 2. Coba pencocokan berdasarkan ProductClass saja jika OUI berbeda (misal Huawei OEM / Rebrand)
+    // 2. Coba pencocokan berdasarkan ProductClass saja jika OUI berbeda (misal OEM / Rebrand)
     if (productClass) {
       const classMatch = await this.profileRepo
         .createQueryBuilder('p')
@@ -65,9 +77,27 @@ export class ProfileResolverService {
           capabilities: classMatch.capabilities as Record<string, boolean>,
         };
       }
+
+      // 2b. Pencocokan partial/substring (misal ONT lapor 'ZXHN F609' -> cocok ke 'F609', atau 'EchoLife HG8245H5')
+      const partialMatch = await this.profileRepo
+        .createQueryBuilder('p')
+        .where(
+          'LOWER(:pc) LIKE LOWER(CONCAT("%", p.product_class, "%")) OR LOWER(p.name) LIKE LOWER(CONCAT("%", :pc, "%"))',
+          { pc: productClass },
+        )
+        .getOne();
+
+      if (partialMatch) {
+        return {
+          profile: partialMatch,
+          status: 'matched',
+          params: partialMatch.params as Record<string, string>,
+          capabilities: partialMatch.capabilities as Record<string, boolean>,
+        };
+      }
     }
 
-    // 3. Coba deteksi Huawei atau Zimlink jika manufacturer mengandung kata kunci
+    // 3. Deteksi Vendor / Manufacturer Spesifik jika ProductClass baru/tidak dikenal
     if (manufacturer.includes('huawei')) {
       const huaweiDefault = await this.profileRepo.findOne({
         where: { productClass: 'HG8245H5' },
@@ -82,9 +112,43 @@ export class ProfileResolverService {
       }
     }
 
+    if (manufacturer.includes('zte')) {
+      const isDualBand = productClass.toLowerCase().includes('670') || productClass.toLowerCase().includes('dual') || productClass.toLowerCase().includes('5g');
+      const targetPc = isDualBand ? 'F670L' : 'F609';
+      const zteDefault = await this.profileRepo.findOne({
+        where: { productClass: targetPc },
+      });
+      if (zteDefault) {
+        return {
+          profile: zteDefault,
+          status: 'matched',
+          params: zteDefault.params as Record<string, string>,
+          capabilities: zteDefault.capabilities as Record<string, boolean>,
+        };
+      }
+    }
+
+    if (manufacturer.includes('fiberhome')) {
+      const isDualBand = productClass.toLowerCase().includes('6245') || productClass.toLowerCase().includes('dual') || productClass.toLowerCase().includes('5g');
+      const targetPc = isDualBand ? 'HG6245D' : 'AN5506-04-F';
+      const fhDefault = await this.profileRepo.findOne({
+        where: { productClass: targetPc },
+      });
+      if (fhDefault) {
+        return {
+          profile: fhDefault,
+          status: 'matched',
+          params: fhDefault.params as Record<string, string>,
+          capabilities: fhDefault.capabilities as Record<string, boolean>,
+        };
+      }
+    }
+
     if (manufacturer.includes('zimlink')) {
+      const isDualBand = productClass.toLowerCase().includes('200') || productClass.toLowerCase().includes('dual');
+      const targetPc = isDualBand ? 'ZM-G200' : 'ZM-G100';
       const zimlinkDefault = await this.profileRepo.findOne({
-        where: { productClass: 'ZM-G100' },
+        where: { productClass: targetPc },
       });
       if (zimlinkDefault) {
         return {
@@ -92,6 +156,22 @@ export class ProfileResolverService {
           status: 'matched',
           params: zimlinkDefault.params as Record<string, string>,
           capabilities: zimlinkDefault.capabilities as Record<string, boolean>,
+        };
+      }
+    }
+
+    if (manufacturer.includes('vsol')) {
+      const isDualBand = productClass.toLowerCase().includes('2804') || productClass.toLowerCase().includes('dual');
+      const targetPc = isDualBand ? 'V2804REWT' : 'V2801SG';
+      const vsolDefault = await this.profileRepo.findOne({
+        where: { productClass: targetPc },
+      });
+      if (vsolDefault) {
+        return {
+          profile: vsolDefault,
+          status: 'matched',
+          params: vsolDefault.params as Record<string, string>,
+          capabilities: vsolDefault.capabilities as Record<string, boolean>,
         };
       }
     }
@@ -147,6 +227,7 @@ export class ProfileResolverService {
       }
     }
     if (count > 0) {
+      this.cache.clear();
       this.logger.log(`Berhasil menyemai ${count} default device profiles.`);
     }
     return count;

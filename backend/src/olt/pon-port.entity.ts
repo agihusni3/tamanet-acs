@@ -30,6 +30,9 @@ export class PonPort {
   @Column({ length: 50, default: 'EPON0/1' })
   label: string;
 
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  description?: string;
+
   @OneToMany(() => Onu, (onu) => onu.ponPort)
   onus: Onu[];
 }

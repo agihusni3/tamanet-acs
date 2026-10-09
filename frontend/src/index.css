@@ -3,23 +3,432 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    color-scheme: light dark;
+  }
+
+  html.dark {
+    color-scheme: dark;
+  }
+
+  html.light {
+    color-scheme: light;
+  }
+
+  html,
+  body,
+  #root {
+    height: 100% !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    position: fixed !important;
+    inset: 0 !important;
+    overscroll-behavior: none !important;
+    -webkit-overflow-scrolling: auto !important;
+  }
+
+  html {
+    font-family: 'Plus Jakarta Sans', Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    letter-spacing: -0.011em;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
   body {
-    @apply bg-dark-900 text-slate-100;
+    font-family: 'Plus Jakarta Sans', Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    @apply bg-slate-100 text-slate-800 dark:bg-dark-900 dark:text-slate-100 transition-colors duration-150;
+  }
+
+  h1, h2, h3, .font-display {
+    font-family: 'Outfit', 'Plus Jakarta Sans', sans-serif;
+    letter-spacing: -0.02em;
+  }
+
+  code, pre, .font-mono {
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    letter-spacing: -0.01em;
   }
 }
 
-/* Custom scrollbar for modern dark UI */
+/* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #0d1422;
+  background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #25334d;
+  background: #cbd5e1;
   border-radius: 9999px;
 }
-::-webkit-scrollbar-thumb:hover {
-  background: #3b82f6;
+html.dark ::-webkit-scrollbar-thumb {
+  background: #25334d;
 }
+::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
+/* Light Mode Comprehensive Theme Overrides */
+html.light .bg-dark-900,
+html.light .bg-dark-900\/98,
+html.light .bg-dark-900\/95,
+html.light .bg-dark-900\/90,
+html.light .bg-dark-900\/80,
+html.light .bg-dark-900\/60,
+html.light .bg-dark-950,
+html.light .bg-slate-950,
+html.light .bg-slate-950\/95,
+html.light .bg-slate-950\/90,
+html.light .bg-slate-950\/80,
+html.light .bg-slate-950\/70,
+html.light .bg-slate-950\/60,
+html.light .bg-slate-950\/50,
+html.light .bg-slate-950\/40,
+html.light div.bg-slate-900,
+html.light div.bg-slate-900\/98,
+html.light div.bg-slate-900\/95,
+html.light div.bg-slate-900\/90,
+html.light div.bg-slate-900\/80,
+html.light div.bg-slate-900\/70,
+html.light div.bg-slate-900\/60,
+html.light div.bg-slate-900\/50,
+html.light div.bg-slate-900\/40,
+html.light section.bg-slate-900,
+html.light main.bg-slate-900 {
+  background-color: #f8fafc !important;
+}
+
+html.light .bg-dark-800,
+html.light .bg-dark-850,
+html.light .bg-dark-850\/98,
+html.light .bg-dark-850\/95,
+html.light .bg-dark-850\/90,
+html.light .bg-dark-850\/80,
+html.light .bg-dark-800\/95,
+html.light .bg-dark-800\/90,
+html.light .bg-dark-800\/80,
+html.light .bg-slate-850,
+html.light .bg-slate-800\/90,
+html.light .bg-slate-800\/80,
+html.light .bg-slate-800\/70 {
+  background-color: #ffffff !important;
+}
+
+html.light .from-slate-900 {
+  --tw-gradient-from: #f8fafc !important;
+}
+html.light .via-slate-850 {
+  --tw-gradient-stops: var(--tw-gradient-from), #f1f5f9, var(--tw-gradient-to) !important;
+}
+html.light .to-slate-900 {
+  --tw-gradient-to: #f8fafc !important;
+}
+
+/* Comprehensive Light Mode Borders (ensure crisp, subtle border definition) */
+html.light .border-slate-800,
+html.light .border-slate-800\/90,
+html.light .border-slate-800\/80,
+html.light .border-slate-800\/70,
+html.light .border-slate-800\/60,
+html.light .border-slate-800\/50,
+html.light .border-slate-700,
+html.light .border-slate-700\/90,
+html.light .border-slate-700\/80,
+html.light .border-slate-700\/70,
+html.light .border-slate-700\/60,
+html.light .border-slate-700\/50,
+html.light .border-slate-600,
+html.light .border-slate-600\/80,
+html.light .border-slate-600\/60,
+html.light .border-slate-600\/50 {
+  border-color: #e2e8f0 !important;
+}
+
+/* Default text colors in light mode */
+html.light .text-white {
+  color: #0f172a !important;
+}
+
+html.light .text-slate-100 {
+  color: #1e293b !important;
+}
+
+html.light .text-slate-200 {
+  color: #334155 !important;
+}
+
+html.light .text-slate-300 {
+  color: #475569 !important;
+}
+
+html.light .text-slate-400 {
+  color: #64748b !important;
+}
+
+/* Form inputs in light mode (exclude designated dark pages like login) */
+html.light input:not(.login-input):not([type="checkbox"]):not([type="radio"]):not([type="color"]),
+html.light select:not(.login-input),
+html.light textarea:not(.login-input) {
+  background-color: #ffffff !important;
+  border-color: #cbd5e1 !important;
+  color: #0f172a !important;
+}
+
+html.light input:not(.login-input)::placeholder,
+html.light textarea:not(.login-input)::placeholder {
+  color: #94a3b8 !important;
+}
+
+html.light .bg-slate-800\/60,
+html.light .bg-slate-700\/50,
+html.light div.bg-slate-800 {
+  background-color: #f1f5f9 !important;
+}
+
+/* Dark action buttons in Light Mode: Must have dark background AND white text */
+html.light button.bg-slate-900,
+html.light button.bg-slate-950,
+html.light a.bg-slate-900,
+html.light .btn-dark {
+  background-color: #0f172a !important;
+  color: #ffffff !important;
+  border-color: #1e293b !important;
+}
+html.light button.bg-slate-900 *,
+html.light button.bg-slate-950 *,
+html.light a.bg-slate-900 *,
+html.light .btn-dark * {
+  color: #ffffff !important;
+}
+
+/* Ensure designated dark elements retain crisp white text */
+html.light .force-white,
+html.light .force-white *,
+html.light .badge-dark,
+html.light .badge-dark * {
+  color: #ffffff !important;
+}
+
+/* Dedicated Login Page Guard (Preserves dark cyber NOC theme regardless of theme mode) */
+html.light .login-page input:not([type="checkbox"]):not([type="radio"]):not([type="color"]) {
+  background-color: rgba(13, 20, 34, 0.8) !important;
+  border-color: rgba(51, 65, 85, 0.8) !important;
+  color: #f8fafc !important;
+}
+html.light .login-page input::placeholder {
+  color: #64748b !important;
+}
+html.light .login-page h1,
+html.light .login-page .login-title,
+html.light .login-page button[type="submit"],
+html.light .login-page button[type="submit"] * {
+  color: #ffffff !important;
+}
+
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pageFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes drawerSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.18s ease-out forwards;
+}
+
+.animate-slideIn {
+  animation: slideIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-pageFade {
+  animation: pageFadeIn 0.28s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+.animate-drawerSlide {
+  animation: drawerSlideIn 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+.animate-spin-slow {
+  animation: spin 12s linear infinite;
+}
+
+/* Animasi Alur Sinyal Fiber Optik (Input -> Output) */
+@keyframes fiberLightFlow {
+  from {
+    stroke-dashoffset: 40;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.fiber-flow-pulse-anim {
+  animation: fiberLightFlow 1.3s linear infinite !important;
+  stroke-linecap: round;
+  pointer-events: none;
+}
+
+
+
+
+.custom-fiber-tooltip {
+  background: rgba(15, 23, 42, 0.92) !important;
+  backdrop-filter: blur(8px) !important;
+  color: #f1f5f9 !important;
+  border: 1px solid rgba(71, 85, 105, 0.7) !important;
+  border-radius: 8px !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45) !important;
+  font-size: 11px !important;
+  padding: 4px 8px !important;
+}
+
+.custom-fiber-tooltip.leaflet-tooltip-top:before {
+  border-top-color: rgba(15, 23, 42, 0.92) !important;
+}
+
+.custom-fiber-tooltip.leaflet-tooltip-bottom:before {
+  border-bottom-color: rgba(15, 23, 42, 0.92) !important;
+}
+
+/* Hilangkan frame kotak / outline biru pada line kabel dan elemen peta saat diklik atau difokus */
+.leaflet-container path,
+.leaflet-container svg,
+.leaflet-container .leaflet-interactive,
+path.leaflet-interactive {
+  outline: none !important;
+  -webkit-tap-highlight-color: transparent !important;
+}
+
+.leaflet-container path:focus,
+.leaflet-container path:focus-visible,
+.leaflet-container svg:focus,
+.leaflet-container svg:focus-visible,
+.leaflet-container .leaflet-interactive:focus,
+.leaflet-container .leaflet-interactive:focus-visible,
+path.leaflet-interactive:focus,
+path.leaflet-interactive:focus-visible,
+.leaflet-interactive:focus,
+.leaflet-interactive:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* Mobile Leaflet bottom controls */
+@media (max-width: 768px) {
+  .leaflet-bottom.leaflet-left {
+    bottom: 14px !important;
+    left: 10px !important;
+  }
+  .leaflet-bottom.leaflet-right {
+    bottom: 14px !important;
+    right: 10px !important;
+  }
+  .leaflet-control-attribution {
+    display: none !important;
+  }
+}
+
+/* Cegah iOS Safari / Chrome Mobile auto-zoom saat fokus ke input/select/textarea */
+@media screen and (max-width: 768px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
+/* Optimasi touch responsiveness & cegah double-tap zoom delay */
+html,
+body {
+  touch-action: manipulation;
+  -webkit-text-size-adjust: 100%;
+}
+
+/* Matikan overscroll / rubber-banding pada container peta Leaflet */
+.leaflet-container {
+  touch-action: pan-x pan-y !important;
+  overscroll-behavior: none !important;
+  -webkit-overflow-scrolling: auto !important;
+}
+
+/* ========================================================
+   GLOBAL AUDIT: STANDARDIZED SYMMETRICAL DROPDOWN STYLING
+   Menghilangkan panah bawaan OS yang mepet sudut melengkung.
+   Mengganti dengan SVG ChevronDown simetris (vertikal & horizontal)
+   berjarak pas dari border kanan di mode terang dan gelap.
+   ======================================================== */
+select {
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  -moz-appearance: none !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") !important;
+  background-position: right 0.85rem center !important;
+  background-repeat: no-repeat !important;
+  background-size: 0.95rem 0.95rem !important;
+  padding-right: 2.35rem !important;
+  cursor: pointer;
+}
+
+html.light select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") !important;
+}
+
+select:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Menu popup option dropdown konsisten di dark & light mode */
+select option {
+  background-color: #0f172a;
+  color: #f8fafc;
+  padding: 6px 10px;
+}
+
+html.light select option {
+  background-color: #ffffff;
+  color: #0f172a;
+  padding: 6px 10px;
+}
+

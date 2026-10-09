@@ -1,9 +1,12 @@
 import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
+import { RolesGuard, Roles } from '../auth/roles.guard';
+import { UserRole } from '../users/user.entity';
 import { TasksService } from './tasks.service';
 
 @Controller('tasks')
-@UseGuards(AuthGuard('jwt'))
+@UseGuards(AuthGuard('jwt'), RolesGuard)
+@Roles(UserRole.ADMIN, UserRole.NOC, UserRole.TEKNISI)
 export class TasksController {
   constructor(private readonly tasksService: TasksService) {}
 
@@ -17,3 +20,4 @@ export class TasksController {
     return this.tasksService.getTask(id);
   }
 }
+

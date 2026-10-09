@@ -31,7 +31,21 @@ export class DevicesService {
    */
   async syncFromGenieACS(): Promise<{ synced: number }> {
     const rawDevices = await this.genieacsClient.getDevices();
-    let count = 0;
+    if (!rawDevices || rawDevices.length === 0) {
+      return { synced: 0 };
+    }
+
+    // 1. Pre-load all existing devices (1 query instead of N queries)
+    const existingDevices = await this.deviceRepo.find();
+    const deviceMap = new Map<string, Device>();
+    for (const ed of existingDevices) {
+      deviceMap.set(ed.genieId, ed);
+    }
+
+    // 2. Cache profil yang sudah di-resolve agar tidak query berulang untuk model yang sama
+    const profileCache = new Map<string, string | null>();
+    const devicesToSave: Device[] = [];
+    const now = new Date();
 
     for (const raw of rawDevices) {
       const genieId = raw._id;
@@ -45,20 +59,28 @@ export class DevicesService {
       const wanIp = raw.VirtualParameters?.wanIP?._value || null;
       const uptime = parseInt(raw.VirtualParameters?.uptime?._value, 10) || 0;
       const rxPowerAcs = raw.VirtualParameters?.rxPower?._value || null;
-      const lastInform = raw._lastInform ? new Date(raw._lastInform) : new Date();
+      const lastInform = raw._lastInform ? new Date(raw._lastInform) : now;
 
       // Cek status online (inform kurang dari 10 menit lalu)
       const isOnline = Date.now() - lastInform.getTime() < 10 * 60 * 1000;
       const status = isOnline ? DeviceStatus.ONLINE : DeviceStatus.OFFLINE;
 
-      // Cari atau buat profil yang cocok
-      const resolved = await this.profileResolver.resolve({
-        oui,
-        productClass,
-        manufacturer,
-      });
+      // Resolve profile dengan in-memory cache
+      const profileKey = `${oui}::${productClass}::${manufacturer}`;
+      let resolvedProfileId: string | null = null;
+      if (profileCache.has(profileKey)) {
+        resolvedProfileId = profileCache.get(profileKey)!;
+      } else {
+        const resolved = await this.profileResolver.resolve({
+          oui,
+          productClass,
+          manufacturer,
+        });
+        resolvedProfileId = resolved.profile?.id || null;
+        profileCache.set(profileKey, resolvedProfileId);
+      }
 
-      let device = await this.deviceRepo.findOne({ where: { genieId } });
+      let device = deviceMap.get(genieId);
       if (!device) {
         device = this.deviceRepo.create({
           genieId,
@@ -69,7 +91,7 @@ export class DevicesService {
           manufacturer,
           model,
           firmware,
-          profileId: resolved.profile?.id || null,
+          profileId: resolvedProfileId,
           wanIp,
           uptime,
           rxPowerAcs,
@@ -86,17 +108,21 @@ export class DevicesService {
         device.rxPowerAcs = rxPowerAcs;
         device.status = status;
         device.lastInform = lastInform;
-        if (!device.profileId && resolved.profile) {
-          device.profileId = resolved.profile.id;
+        if (!device.profileId && resolvedProfileId) {
+          device.profileId = resolvedProfileId;
         }
       }
 
-      await this.deviceRepo.save(device);
-      count++;
+      devicesToSave.push(device);
     }
 
-    this.logger.log(`Sinkronisasi selesai: ${count} perangkat diproses.`);
-    return { synced: count };
+    // 3. Batch save all devices in chunks of 100
+    if (devicesToSave.length > 0) {
+      await this.deviceRepo.save(devicesToSave, { chunk: 100 });
+    }
+
+    this.logger.log(`Sinkronisasi selesai: ${devicesToSave.length} perangkat diproses.`);
+    return { synced: devicesToSave.length };
   }
 
   async findAll(query: {

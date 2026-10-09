@@ -43,4 +43,7 @@ export class Cable {
     nullable: true,
   })
   geom: string | null;
+
+  @Column({ type: 'text', nullable: true })
+  notes: string | null;
 }

@@ -17,6 +17,14 @@ COPY <<EOF /etc/nginx/conf.d/default.conf
 server {
     listen 80;
     server_name _;
+
+    location ~ /\.(?!well-known).* {
+        deny all;
+        access_log off;
+        log_not_found off;
+        return 404;
+    }
+
     location / {
         root /usr/share/nginx/html;
         index index.html index.htm;

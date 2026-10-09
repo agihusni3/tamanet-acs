@@ -1,4 +1,4 @@
-import { Injectable, Logger, HttpException, HttpStatus } from '@nestjs/common';
+import { Injectable, Logger, HttpException, HttpStatus, BadRequestException } from '@nestjs/common';
 import axios, { AxiosInstance } from 'axios';
 
 export interface ParameterValueTuple {
@@ -16,6 +16,20 @@ export class GenieacsClientService {
       baseURL: nbiUrl,
       timeout: 15000,
     });
+  }
+
+  /**
+   * Mitigasi ATK-06: Validasi Device ID untuk mencegah URI injection / parameter pollution
+   */
+  private validateDeviceId(deviceId: string): string {
+    if (!deviceId || typeof deviceId !== 'string') {
+      throw new BadRequestException('ID Perangkat tidak valid');
+    }
+    const trimmed = deviceId.trim();
+    if (!/^[a-zA-Z0-9_\-\.\:\%]+$/.test(trimmed)) {
+      throw new BadRequestException('Format ID Perangkat tidak sah (mengandung karakter terlarang)');
+    }
+    return trimmed;
   }
 
   /**
@@ -37,14 +51,15 @@ export class GenieacsClientService {
    * Mengambil detail satu perangkat dari NBI berdasarkan ID
    */
   async getDevice(deviceId: string): Promise<any | null> {
+    const safeId = this.validateDeviceId(deviceId);
     try {
-      const res = await this.client.get(`/devices/?query=${encodeURIComponent(JSON.stringify({ _id: deviceId }))}`);
+      const res = await this.client.get(`/devices/?query=${encodeURIComponent(JSON.stringify({ _id: safeId }))}`);
       if (res.data && res.data.length > 0) {
         return res.data[0];
       }
       return null;
     } catch (err: any) {
-      this.logger.error(`Error getDevice '${deviceId}' dari NBI: ${err.message}`);
+      this.logger.error(`Error getDevice '${safeId}' dari NBI: ${err.message}`);
       return null;
     }
   }
@@ -100,7 +115,8 @@ export class GenieacsClientService {
    * Jika connection_request gagal (modem di belakang NAT), fallback tanpa connection_request
    */
   async createTask(deviceId: string, taskPayload: any, connectionRequest = true): Promise<any> {
-    const encodedId = encodeURIComponent(deviceId);
+    const safeId = this.validateDeviceId(deviceId);
+    const encodedId = encodeURIComponent(safeId);
     const crParam = connectionRequest ? '?connection_request' : '';
 
     try {

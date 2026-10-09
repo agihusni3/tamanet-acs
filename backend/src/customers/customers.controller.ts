@@ -10,11 +10,15 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
+import { RolesGuard, Roles } from '../auth/roles.guard';
+import { UserRole } from '../users/user.entity';
 import { CustomersService } from './customers.service';
-import { Customer } from './customer.entity';
+import { CreateCustomerDto } from './dto/create-customer.dto';
+import { UpdateCustomerDto } from './dto/update-customer.dto';
+import { ImportCustomersDto } from './dto/import-customer.dto';
 
 @Controller('customers')
-@UseGuards(AuthGuard('jwt'))
+@UseGuards(AuthGuard('jwt'), RolesGuard)
 export class CustomersController {
   constructor(private readonly customersService: CustomersService) {}
 
@@ -29,22 +33,26 @@ export class CustomersController {
   }
 
   @Post()
-  async create(@Body() data: Partial<Customer>) {
+  @Roles(UserRole.ADMIN, UserRole.NOC, UserRole.TEKNISI)
+  async create(@Body() data: CreateCustomerDto) {
     return this.customersService.create(data);
   }
 
   @Put(':id')
-  async update(@Param('id') id: string, @Body() data: Partial<Customer>) {
+  @Roles(UserRole.ADMIN, UserRole.NOC, UserRole.TEKNISI)
+  async update(@Param('id') id: string, @Body() data: UpdateCustomerDto) {
     return this.customersService.update(id, data);
   }
 
   @Delete(':id')
+  @Roles(UserRole.ADMIN, UserRole.NOC)
   async remove(@Param('id') id: string) {
     return this.customersService.remove(id);
   }
 
   @Post('import')
-  async importBulk(@Body('records') records: any[]) {
-    return this.customersService.importBulk(records || []);
+  @Roles(UserRole.ADMIN, UserRole.NOC)
+  async importBulk(@Body() dto: ImportCustomersDto) {
+    return this.customersService.importBulk(dto.records || []);
   }
 }

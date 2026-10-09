@@ -27,11 +27,31 @@ export class CliParserService {
     const port = parseInt(portMatch[2], 10);
     const onuIndex = parseInt(portMatch[3], 10);
 
-    // Ekstrak MAC Address jika ada (format XX:XX:XX:XX:XX:XX atau XXXX-XXXX-XXXX)
+    // Ekstrak MAC Address jika ada (format XX:XX:XX:XX:XX:XX, XX-XX-XX-XX-XX-XX, atau XXXX.XXXX.XXXX)
     let mac: string | null = null;
     const macMatch = trimmed.match(/([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})/);
     if (macMatch) {
       mac = macMatch[0].toUpperCase();
+    } else {
+      const dotMacMatch = trimmed.match(/([0-9A-Fa-f]{4})\.([0-9A-Fa-f]{4})\.([0-9A-Fa-f]{4})/);
+      if (dotMacMatch) {
+        const p1 = dotMacMatch[1];
+        const p2 = dotMacMatch[2];
+        const p3 = dotMacMatch[3];
+        mac = `${p1.slice(0, 2)}:${p1.slice(2, 4)}:${p2.slice(0, 2)}:${p2.slice(2, 4)}:${p3.slice(0, 2)}:${p3.slice(2, 4)}`.toUpperCase();
+      }
+    }
+
+    // Ekstrak GPON Serial Number (misal: HWTC12345678, ZTEGC1234567, VSOL12345678, FHTT12345678)
+    let sn: string | null = null;
+    const gponSnMatch = trimmed.match(/\b([A-Za-z]{4}[0-9A-Fa-f]{8})\b/);
+    if (gponSnMatch) {
+      sn = gponSnMatch[1].toUpperCase();
+    } else {
+      const explicitSnMatch = trimmed.match(/(?:SN|Serial|SN:)\s*[:=]?\s*([A-Za-z0-9]{8,16})/i);
+      if (explicitSnMatch) {
+        sn = explicitSnMatch[1].toUpperCase();
+      }
     }
 
     // Tentukan status dan offline reason
@@ -60,6 +80,16 @@ export class CliParserService {
       rxPower = `-${rxMatch[1]}`;
     }
 
+    // Ekstrak TX Power (misal: 2.10 atau +2.50 yang mengikuti RX)
+    let txPower: string | null = null;
+    if (rxPower) {
+      const afterRx = trimmed.slice(trimmed.indexOf(rxPower) + rxPower.length);
+      const txMatch = afterRx.match(/\s+([+]?\d{1,2}\.\d{1,2})\b/);
+      if (txMatch) {
+        txPower = txMatch[1];
+      }
+    }
+
     // Ekstrak Jarak (misal: 1200m atau angka di akhir)
     let distance: number | null = null;
     const distMatch = trimmed.match(/\b(\d{2,5})(?:m|M)?\b(?:\s*$)/);
@@ -72,11 +102,12 @@ export class CliParserService {
       port,
       onuIndex,
       mac,
-      sn: null,
+      sn,
       name: `ONU-${slot}/${port}:${onuIndex}`,
       status,
       offlineReason,
       rxPower,
+      txPower,
       distance,
     };
   }

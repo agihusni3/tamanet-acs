@@ -23,9 +23,11 @@ declare(`${mgmtPath}.PeriodicInformEnable`, { value: 1 }, { value: true });
 declare(`${mgmtPath}.PeriodicInformInterval`, { value: 1 }, { value: 300 });
 
 // 3. Konfigurasi Kredensial Connection Request (Untuk remote trigger HTTP dari ACS)
-// Menggunakan kredensial konsisten per perangkat atau kredensial default sistem
-declare(`${mgmtPath}.ConnectionRequestUsername`, { value: 1 }, { value: "cr_admin" });
-declare(`${mgmtPath}.ConnectionRequestPassword`, { value: 1 }, { value: "cr_secret_password_random" });
+// CATATAN: Nilai di bawah ini OTOMATIS diganti oleh sync-genieacs.js dari variabel .env:
+//   GENIEACS_CR_USERNAME dan GENIEACS_CR_PASSWORD
+// Jangan ubah placeholder {{...}} di bawah ini secara manual.
+declare(`${mgmtPath}.ConnectionRequestUsername`, { value: 1 }, { value: "{{GENIEACS_CR_USERNAME}}" });
+declare(`${mgmtPath}.ConnectionRequestPassword`, { value: 1 }, { value: "{{GENIEACS_CR_PASSWORD}}" });
 
 // 4. Refresh Parameter Identitas & Status Sistem Setiap 1 Jam (atau saat Boot)
 const deviceInfoPath = `${root}.DeviceInfo`;

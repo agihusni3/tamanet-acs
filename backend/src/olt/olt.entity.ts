@@ -56,9 +56,27 @@ export class Olt {
   })
   geom: string | null;
 
-  @OneToMany(() => PonPort, (p) => p.olt)
+  @Column({ name: 'web_port', type: 'int', default: 80 })
+  webPort: number;
+
+  @Column({ name: 'cli_port', type: 'int', default: 23 })
+  cliPort: number;
+
+  @Column({ name: 'pon_ports_count', type: 'int', default: 2 })
+  ponPortsCount: number;
+
+  @Column({ name: 'default_user', length: 50, nullable: true })
+  defaultUser: string | null;
+
+  @Column({ name: 'default_pass', length: 100, nullable: true })
+  defaultPass: string | null;
+
+  @Column({ length: 50, nullable: true })
+  uptime: string | null;
+
+  @OneToMany(() => PonPort, (p) => p.olt, { cascade: true })
   ports: PonPort[];
 
-  @OneToMany(() => Onu, (o) => o.olt)
+  @OneToMany(() => Onu, (o) => o.olt, { cascade: true })
   onus: Onu[];
 }
