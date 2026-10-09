@@ -441,10 +441,10 @@ export const recognizeModemFromInput = (
 // 3. DEFAULT INITIAL DATA
 // ============================================================================
 const DEFAULT_BRANDING: BrandSettings = {
-  appName: 'PROJECT ACS',
-  tagline: 'TR-069 & GIS FTTH',
+  appName: 'TAMA.NET',
+  tagline: 'Connecting For You',
   logoType: 'icon',
-  logoIcon: 'activity',
+  logoIcon: 'radio',
   logoImageUrl: '',
   logoColor: '#2563EB',
 };

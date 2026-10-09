@@ -25,6 +25,7 @@ import {
   ShieldCheck,
   Check,
   Ban,
+  Download,
 } from 'lucide-react';
 import { useAppContext, ModemProfile, ROLE_DEFINITIONS, UserRole } from '../context/AppContext';
 import { BrandLogo } from '../components/BrandLogo';
@@ -254,6 +255,74 @@ export const SettingsPage: React.FC = () => {
     reader.readAsDataURL(file);
   };
 
+  const handleExportData = () => {
+    const backupKeys = [
+      'acs_brand_settings',
+      'acs_theme_mode',
+      'acs_gis_nodes',
+      'acs_gis_routes',
+      'acs_gis_center',
+      'acs_olts_list',
+      'acs_customers_list',
+      'acs_devices_list',
+      'acs_alerts',
+      'acs_modem_profiles',
+    ];
+    const data: Record<string, any> = {};
+    backupKeys.forEach((key) => {
+      const val = localStorage.getItem(key);
+      if (val) {
+        try {
+          data[key] = JSON.parse(val);
+        } catch {
+          data[key] = val;
+        }
+      }
+    });
+
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `tamanet-acs-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast('Data berhasil diekspor ke file JSON');
+  };
+
+  const handleImportData = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const text = event.target?.result as string;
+        const data = JSON.parse(text);
+        if (typeof data === 'object' && data !== null) {
+          Object.entries(data).forEach(([k, v]) => {
+            if (typeof v === 'string') {
+              localStorage.setItem(k, v);
+            } else {
+              localStorage.setItem(k, JSON.stringify(v));
+            }
+          });
+          showToast('Data berhasil dipulihkan! Memuat ulang sistem...');
+          setTimeout(() => {
+            window.location.reload();
+          }, 800);
+        }
+      } catch (err: any) {
+        showToast('Gagal memulihkan data: Format file JSON tidak valid');
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  };
+
+
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-5 sm:space-y-6 max-w-7xl mx-auto select-none">
       {/* Page Header */}
@@ -345,6 +414,43 @@ export const SettingsPage: React.FC = () => {
             </div>
           </form>
         </div>
+
+        {/* CADANGKAN & PULIHKAN DATA SISTEM (BACKUP & RESTORE) */}
+        <div className="bg-white dark:bg-dark-800 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 sm:p-5 shadow-sm space-y-3">
+          <div className="flex items-center gap-2 border-b border-slate-100 dark:border-slate-700/80 pb-3">
+            <Download className="w-4 h-4 text-slate-700 dark:text-slate-300" />
+            <h2 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+              Cadangkan &amp; Sinkronisasi Data (Backup &amp; Restore)
+            </h2>
+          </div>
+
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            Pindahkan seluruh data peta GIS FTTH, titik ODP, jalur fiber, identitas ISP, dan pengaturan dari localhost ke server publik/Proxmox Anda dengan sekali klik.
+          </p>
+
+          <div className="flex flex-wrap items-center gap-3 pt-1">
+            <button
+              type="button"
+              onClick={handleExportData}
+              className="inline-flex items-center gap-2 px-4 py-2.5 bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white text-white dark:text-slate-900 font-bold text-xs rounded-xl shadow-xs transition-all active:scale-95"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>Ekspor Data (Unduh .JSON)</span>
+            </button>
+
+            <label className="inline-flex items-center gap-2 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-dark-900 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs rounded-xl border border-slate-300 dark:border-slate-700 shadow-xs cursor-pointer transition-all active:scale-95">
+              <Upload className="w-3.5 h-3.5" />
+              <span>Pulihkan / Impor Data Backup</span>
+              <input
+                type="file"
+                accept=".json"
+                onChange={handleImportData}
+                className="hidden"
+              />
+            </label>
+          </div>
+        </div>
+
 
         {/* 2. PROFIL ADMIN & LEVELING ROLE PENGGUNA */}
         <div className="bg-white dark:bg-dark-800 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 sm:p-5 shadow-sm space-y-4">

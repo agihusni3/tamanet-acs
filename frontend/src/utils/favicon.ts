@@ -55,7 +55,7 @@ export function syncBrowserFaviconAndTitle(branding: BrandSettings): void {
     // 1. Perbarui Document Title
     const titleText = branding.appName
       ? `${branding.appName}${branding.tagline ? ` • ${branding.tagline}` : ''}`
-      : 'PROJECT ACS • TR-069 & GIS FTTH';
+      : 'TAMA.NET • Connecting For You';
     document.title = titleText;
 
     // 2. Tentukan URL Favicon (Bisa gambar upload/URL atau SVG ikon otomatis)
