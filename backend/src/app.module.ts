@@ -32,7 +32,7 @@ import { AuditModule } from './audit/audit.module';
         process.env.DATABASE_URL ||
         'postgresql://acs_admin:postgres_super_secret_change_me@postgres:5432/acs_db',
       autoLoadEntities: true,
-      synchronize: process.env.NODE_ENV !== 'production', // Auto-sync hanya di dev; gunakan migration di production
+      synchronize: process.env.TYPEORM_SYNC !== 'false', // Otomatis buat tabel saat deploy perdana
       logging: process.env.NODE_ENV !== 'production',
     }),
     AuthModule,
