@@ -1,7 +1,7 @@
 # ==============================================================================
 # Multi-stage Dockerfile for ACS Backend (NestJS)
 # ==============================================================================
-FROM node:20-alpine AS builder
+FROM node:20-bookworm-slim AS builder
 
 WORKDIR /app
 COPY package*.json ./
@@ -11,7 +11,7 @@ COPY . .
 RUN npm run build
 
 # Production Stage
-FROM node:20-alpine AS runner
+FROM node:20-bookworm-slim AS runner
 
 WORKDIR /app
 ENV NODE_ENV=production
@@ -25,3 +25,4 @@ USER node
 
 EXPOSE 4000
 CMD ["node", "dist/main"]
+
